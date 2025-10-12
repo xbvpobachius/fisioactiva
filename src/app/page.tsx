@@ -1,9 +1,12 @@
 import Dashboard from "@/components/dashboard";
+import { AuthGuard } from "@/components/auth-guard";
 
 export default function Home() {
   return (
-    <main>
-      <Dashboard />
-    </main>
+    <AuthGuard>
+      <main>
+        <Dashboard />
+      </main>
+    </AuthGuard>
   );
 }

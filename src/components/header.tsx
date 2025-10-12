@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Calendar as CalendarIcon, Filter, Mic } from "lucide-react";
+import { Calendar as CalendarIcon, Filter, Mic, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { professionals, sessionTypes } from "@/lib/data";
 import { format } from "date-fns";
 import { ca } from 'date-fns/locale';
+import { signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 type AppHeaderProps = {
   selectedDate: Date;
@@ -19,12 +21,18 @@ type AppHeaderProps = {
 };
 
 export function AppHeader({ selectedDate, onDateChange, filters, onFiltersChange, onAssistantClick }: AppHeaderProps) {
+    const { data: session } = useSession();
+    
     const handleProfessionalChange = (value: string) => {
         onFiltersChange({ ...filters, professional: value });
     };
 
     const handleSessionTypeChange = (value: string) => {
         onFiltersChange({ ...filters, sessionType: value });
+    };
+
+    const handleLogout = async () => {
+        await signOut({ callbackUrl: "/login" });
     };
 
   return (
@@ -42,6 +50,14 @@ export function AppHeader({ selectedDate, onDateChange, filters, onFiltersChange
                 </a>
             </div>
             <div className="flex items-center gap-2">
+                {session && (
+                    <div className="hidden sm:flex items-center gap-2 mr-2">
+                        <span className="text-sm text-blue-100">Bienvenido, {session.user?.name}</span>
+                    </div>
+                )}
+                <Button variant="outline" size="icon" className="text-foreground hover:bg-white/10" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4" />
+                </Button>
                 <Button variant="outline" size="icon" className="text-foreground" onClick={onAssistantClick}>
                     <Mic className="h-4 w-4" />
                 </Button>
