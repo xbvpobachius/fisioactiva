@@ -45,7 +45,7 @@ import { useState, useMemo } from "react";
 import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { addMinutes } from "date-fns";
 import { Separator } from "./ui/separator";
-import { addClient, deleteClient as deleteClientService, updateClient } from "@/services/clientService";
+import { addClient, deleteClient as deleteClientService, updateClient } from "@/services/clientService.supabase";
 
 
 const formSchema = z.object({
@@ -83,6 +83,7 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
   const [isAddingClient, setIsAddingClient] = useState(false);
   const [selectedSessionType, setSelectedSessionType] = useState<SessionType | null>(null);
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
+  const [clientSearchQuery, setClientSearchQuery] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -110,6 +111,16 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
   const watchedSessionType = form.watch("sessionType");
   const watchedTime = form.watch("time");
   const watchedZone = form.watch("zone");
+
+  // Filtrar clientes por búsqueda
+  const filteredClients = useMemo(() => {
+    if (!clientSearchQuery.trim()) {
+      return clients;
+    }
+    return clients.filter(client =>
+      client.name.toLowerCase().includes(clientSearchQuery.toLowerCase())
+    );
+  }, [clients, clientSearchQuery]);
 
   const timeSlots = useMemo(() => {
     const slots = [];
@@ -185,10 +196,14 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
       const newClient = await addClient(newClientData);
       if (newClient) {
         onClientsChange(prev => [...prev, newClient]);
-        form.setValue("client", newClient.id);
-        toast({ title: "Client afegit", description: `S'ha afegit ${newClient.name} a la llista.` });
+        setClientSearchQuery(""); // Limpiar la búsqueda
         newClientForm.reset();
         setIsClientDialogOpen(false);
+        // Seleccionar el cliente después de cerrar el diálogo
+        setTimeout(() => {
+          form.setValue("client", newClient.id);
+        }, 100);
+        toast({ title: "Client afegit", description: `S'ha afegit ${newClient.name} a la llista.` });
       }
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "No s'ha pogut afegir el client." });
@@ -314,7 +329,22 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
                               <SelectValue placeholder={!clients.length ? "Carregant clients..." : "Selecciona un client"} />
                             </SelectTrigger>
                             <SelectContent>
-                              {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name} {c.isFirstTime ? '*' : ''}</SelectItem>)}
+                              <div className="px-2 py-2 sticky top-0 bg-background z-10">
+                                <Input
+                                  placeholder="Buscar client..."
+                                  value={clientSearchQuery}
+                                  onChange={(e) => setClientSearchQuery(e.target.value)}
+                                  className="h-8"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              {filteredClients.length > 0 ? (
+                                filteredClients.map(c => <SelectItem key={c.id} value={c.id}>{c.name} {c.isFirstTime ? '*' : ''}</SelectItem>)
+                              ) : (
+                                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                                  No s'han trobat clients
+                                </div>
+                              )}
                             </SelectContent>
                           </Select>
                         </FormControl>

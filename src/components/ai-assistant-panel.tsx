@@ -9,7 +9,7 @@ import { createAppointmentFromText, CreateAppointmentTextOutput } from '@/ai/flo
 import type { Appointment, Client } from '@/lib/types';
 import { professionals, sessionTypes, machines } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { addClient } from '@/services/clientService';
+import { addClient } from '@/services/clientService.supabase';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
 
