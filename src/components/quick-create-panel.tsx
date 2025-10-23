@@ -57,6 +57,7 @@ const formSchema = z.object({
   machine: z.string().optional(),
   time: z.string().min(1, "L'hora és obligatori."),
   isMutua: z.boolean().default(false),
+  isFirstTimeAppointment: z.boolean().default(false),
 });
 
 const newClientSchema = z.object({
@@ -96,6 +97,7 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
       machine: "",
       time: "",
       isMutua: false,
+      isFirstTimeAppointment: false,
     },
   });
 
@@ -254,7 +256,8 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
       const appointmentTime = new Date(selectedDate);
       appointmentTime.setHours(hours, minutes, 0, 0);
 
-      const isFirstAppointmentForThisClient = !!clientDetails.isFirstTime;
+      // Utilitzar el valor del checkbox del formulari
+      const isFirstAppointmentForThisClient = values.isFirstTimeAppointment;
 
       const newAppointmentData = {
           client: clientDetails,
@@ -290,6 +293,7 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
         sessionType: '',
         machine: '',
         isMutua: false,
+        isFirstTimeAppointment: false,
       });
       setSelectedSessionType(null);
 
@@ -577,6 +581,26 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
                       <div className="space-y-1 leading-none">
                         <FormLabel>
                           És de mútua?
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="isFirstTimeAppointment"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-orange-50">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Primera Visita (requereix signatura) - Crear fitxa
                         </FormLabel>
                       </div>
                     </FormItem>
