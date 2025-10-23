@@ -110,29 +110,40 @@ export async function addAppointment(
 
     const appointment = data ? await mapSupabaseToAppointment(data) : null;
 
-    // Enviar notificación a la app de fichas
+    // Enviar notificación a la app de fichas SOLO si es cliente nuevo
     if (appointment) {
-      console.log('📅 [APPOINTMENT] Appointment created successfully, sending notification...');
+      console.log('📅 [APPOINTMENT] Appointment created successfully');
       console.log('📅 [APPOINTMENT] Client name:', appointment.client.name);
-      console.log('📅 [APPOINTMENT] Appointment ID:', appointment.id);
-      console.log('📅 [APPOINTMENT] Start time:', appointment.startTime.toISOString());
+      console.log('📅 [APPOINTMENT] Client isFirstTime:', appointment.client.isFirstTime);
+      console.log('📅 [APPOINTMENT] isFirstTimeAppointment:', appointment.isFirstTimeAppointment);
       
-      // Ejecutar la notificación y esperar el resultado
-      try {
-        const notificationSent = await notifyPendingRecord({
-          clientName: appointment.client.name,
-          appointmentId: appointment.id,
-          appointmentDate: appointment.startTime.toISOString(),
-        });
+      // Solo enviar notificación si el cliente es nuevo (no tiene ficha)
+      const isNewClient = appointment.client.isFirstTime || appointment.isFirstTimeAppointment;
+      
+      if (isNewClient) {
+        console.log('🆕 [APPOINTMENT] New client detected, sending notification...');
+        console.log('📅 [APPOINTMENT] Appointment ID:', appointment.id);
+        console.log('📅 [APPOINTMENT] Start time:', appointment.startTime.toISOString());
         
-        if (notificationSent) {
-          console.log('✅ [APPOINTMENT] Notification sent successfully');
-        } else {
-          console.error('⚠️ [APPOINTMENT] Notification failed but appointment was created');
+        // Ejecutar la notificación y esperar el resultado
+        try {
+          const notificationSent = await notifyPendingRecord({
+            clientName: appointment.client.name,
+            appointmentId: appointment.id,
+            appointmentDate: appointment.startTime.toISOString(),
+          });
+          
+          if (notificationSent) {
+            console.log('✅ [APPOINTMENT] Notification sent successfully for new client');
+          } else {
+            console.error('⚠️ [APPOINTMENT] Notification failed but appointment was created');
+          }
+        } catch (err) {
+          console.error('❌ [APPOINTMENT] Error sending notification:', err);
+          console.error('⚠️ [APPOINTMENT] Appointment was created but notification failed');
         }
-      } catch (err) {
-        console.error('❌ [APPOINTMENT] Error sending notification:', err);
-        console.error('⚠️ [APPOINTMENT] Appointment was created but notification failed');
+      } else {
+        console.log('ℹ️ [APPOINTMENT] Existing client - no notification needed');
       }
     }
 
