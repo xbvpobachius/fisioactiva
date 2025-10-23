@@ -15,11 +15,11 @@ export interface PendingRecordNotification {
 export async function notifyPendingRecord(
   notification: PendingRecordNotification
 ): Promise<boolean> {
-  const FICHES_API_URL = process.env.NEXT_PUBLIC_FICHES_APP_URL;
+  let FICHES_API_URL = process.env.NEXT_PUBLIC_FICHES_APP_URL;
 
   // Log de debug
   console.log('🔔 [NOTIFICATION] Starting notification process...');
-  console.log('🔔 [NOTIFICATION] FICHES_API_URL:', FICHES_API_URL);
+  console.log('🔔 [NOTIFICATION] FICHES_API_URL (raw):', FICHES_API_URL);
   console.log('🔔 [NOTIFICATION] Notification data:', notification);
 
   // Si no hay URL configurada, no enviar notificación
@@ -28,6 +28,10 @@ export async function notifyPendingRecord(
     console.error('❌ [NOTIFICATION] Please add NEXT_PUBLIC_FICHES_APP_URL to Railway environment variables');
     return false;
   }
+
+  // Eliminar "/" al final de la URL si existe para evitar doble slash
+  FICHES_API_URL = FICHES_API_URL.replace(/\/$/, '');
+  console.log('🔔 [NOTIFICATION] FICHES_API_URL (clean):', FICHES_API_URL);
 
   try {
     const url = `${FICHES_API_URL}/api/pending-records`;
