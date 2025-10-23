@@ -3,8 +3,6 @@
  * a la aplicación de gestión de fichas (fisiodbfiches)
  */
 
-const FICHES_API_URL = process.env.NEXT_PUBLIC_FICHES_APP_URL || '';
-
 export interface PendingRecordNotification {
   clientName: string;
   appointmentId: string;
@@ -17,14 +15,25 @@ export interface PendingRecordNotification {
 export async function notifyPendingRecord(
   notification: PendingRecordNotification
 ): Promise<boolean> {
+  const FICHES_API_URL = process.env.NEXT_PUBLIC_FICHES_APP_URL;
+
+  // Log de debug
+  console.log('🔔 [NOTIFICATION] Starting notification process...');
+  console.log('🔔 [NOTIFICATION] FICHES_API_URL:', FICHES_API_URL);
+  console.log('🔔 [NOTIFICATION] Notification data:', notification);
+
   // Si no hay URL configurada, no enviar notificación
   if (!FICHES_API_URL) {
-    console.warn('FICHES_APP_URL not configured. Skipping notification.');
+    console.error('❌ [NOTIFICATION] NEXT_PUBLIC_FICHES_APP_URL not configured!');
+    console.error('❌ [NOTIFICATION] Please add NEXT_PUBLIC_FICHES_APP_URL to Railway environment variables');
     return false;
   }
 
   try {
-    const response = await fetch(`${FICHES_API_URL}/api/pending-records`, {
+    const url = `${FICHES_API_URL}/api/pending-records`;
+    console.log('🔔 [NOTIFICATION] Sending POST to:', url);
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -32,17 +41,25 @@ export async function notifyPendingRecord(
       body: JSON.stringify(notification),
     });
 
+    console.log('🔔 [NOTIFICATION] Response status:', response.status);
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Error sending notification to fiches app:', errorData);
+      const errorText = await response.text();
+      console.error('❌ [NOTIFICATION] Error response:', errorText);
+      console.error('❌ [NOTIFICATION] Response status:', response.status);
       return false;
     }
 
     const result = await response.json();
-    console.log('Notification sent successfully:', result);
+    console.log('✅ [NOTIFICATION] Notification sent successfully!');
+    console.log('✅ [NOTIFICATION] Result:', result);
     return true;
   } catch (error) {
-    console.error('Error calling fiches app API:', error);
+    console.error('❌ [NOTIFICATION] Error calling fiches app API:', error);
+    if (error instanceof Error) {
+      console.error('❌ [NOTIFICATION] Error message:', error.message);
+      console.error('❌ [NOTIFICATION] Error stack:', error.stack);
+    }
     return false;
   }
 }

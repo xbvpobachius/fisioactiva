@@ -112,14 +112,28 @@ export async function addAppointment(
 
     // Enviar notificación a la app de fichas
     if (appointment) {
-      // Ejecutar en segundo plano, no bloquear la creación de la cita
-      notifyPendingRecord({
-        clientName: appointment.client.name,
-        appointmentId: appointment.id,
-        appointmentDate: appointment.startTime.toISOString(),
-      }).catch(err => {
-        console.error('Failed to send notification, but appointment was created:', err);
-      });
+      console.log('📅 [APPOINTMENT] Appointment created successfully, sending notification...');
+      console.log('📅 [APPOINTMENT] Client name:', appointment.client.name);
+      console.log('📅 [APPOINTMENT] Appointment ID:', appointment.id);
+      console.log('📅 [APPOINTMENT] Start time:', appointment.startTime.toISOString());
+      
+      // Ejecutar la notificación y esperar el resultado
+      try {
+        const notificationSent = await notifyPendingRecord({
+          clientName: appointment.client.name,
+          appointmentId: appointment.id,
+          appointmentDate: appointment.startTime.toISOString(),
+        });
+        
+        if (notificationSent) {
+          console.log('✅ [APPOINTMENT] Notification sent successfully');
+        } else {
+          console.error('⚠️ [APPOINTMENT] Notification failed but appointment was created');
+        }
+      } catch (err) {
+        console.error('❌ [APPOINTMENT] Error sending notification:', err);
+        console.error('⚠️ [APPOINTMENT] Appointment was created but notification failed');
+      }
     }
 
     return appointment;
