@@ -28,7 +28,16 @@ const mapSupabaseToAppointment = async (row: any): Promise<Appointment | null> =
 
     const professional = professionals.find(p => p.id === row.professional_id);
     const sessionType = sessionTypes.find(s => s.id === row.session_type_id);
-    const machine = row.machine_id ? machines.find(m => m.id === row.machine_id) : undefined;
+    
+    // Manejar máquinas: puede ser un array JSONB o un solo machine_id (compatibilidad hacia atrás)
+    let machinesArray: any[] = [];
+    if (row.machine_ids && Array.isArray(row.machine_ids)) {
+      machinesArray = row.machine_ids.map((id: string) => machines.find(m => m.id === id)).filter(Boolean);
+    } else if (row.machine_id) {
+      // Compatibilidad hacia atrás: si existe machine_id, lo convertimos a array
+      const machine = machines.find(m => m.id === row.machine_id);
+      if (machine) machinesArray = [machine];
+    }
 
     if (!professional || !sessionType) {
       console.error('Invalid professional or session type');
@@ -43,7 +52,7 @@ const mapSupabaseToAppointment = async (row: any): Promise<Appointment | null> =
       startTime: new Date(row.start_time),
       zone: row.zone as 'Dins' | 'Fora',
       camilla: row.camilla,
-      machine,
+      machines: machinesArray.length > 0 ? machinesArray : undefined,
       notes: row.notes || '',
       isMutua: row.is_mutua,
       isFirstTimeAppointment: row.is_first_time_appointment
@@ -62,7 +71,9 @@ const mapAppointmentToSupabase = (appointment: any) => ({
   start_time: appointment.startTime.toISOString(),
   zone: appointment.zone,
   camilla: appointment.camilla,
-  machine_id: appointment.machine?.id || null,
+  machine_ids: appointment.machines && appointment.machines.length > 0 
+    ? appointment.machines.map((m: any) => m.id) 
+    : null,
   notes: appointment.notes || '',
   is_mutua: appointment.isMutua || false,
   is_first_time_appointment: appointment.isFirstTimeAppointment || false
@@ -175,6 +186,11 @@ export async function updateAppointment(
     }
     if (appointmentData.startTime) {
       updateData.start_time = appointmentData.startTime.toISOString();
+    }
+    if (appointmentData.machines !== undefined) {
+      updateData.machine_ids = appointmentData.machines && appointmentData.machines.length > 0
+        ? appointmentData.machines.map(m => m.id)
+        : null;
     }
 
     const { error } = await supabase

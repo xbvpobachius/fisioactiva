@@ -157,7 +157,7 @@ export default function Dashboard() {
             </TabsContent>
             <TabsContent value="machines" className="flex-1 overflow-auto">
               <MachineView
-                appointments={filteredAppointments.filter(a => !!a.machine)}
+                appointments={filteredAppointments.filter(a => a.machines && a.machines.length > 0)}
                 onAppointmentSelect={setSelectedAppointment}
               />
             </TabsContent>

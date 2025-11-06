@@ -14,7 +14,7 @@ import {z} from 'genkit';
 
 const ExistingAppointmentSchema = z.object({
     professional: z.string(),
-    machine: z.string().optional(),
+    machines: z.array(z.string()).optional(),
     startTime: z.string().describe('The start time of the existing appointment (ISO format).'),
     durationMinutes: z.number(),
     zone: z.string(),
@@ -26,7 +26,7 @@ const ResourceAllocationInputSchema = z.object({
   professional: z.string().describe('The name of the professional assigned to the session.'),
   zone: z.string().describe('The zone where the session will take place (e.g., Dins, Fora).'),
   camilla: z.number().describe('The camilla number for the session.'),
-  machine: z.string().optional().describe('The machine required for the session (e.g., Magneto, Indiba).'),
+  machine: z.string().optional().describe('The machine required for the session (e.g., Magneto, Indiba). Can be multiple machines.'),
   dateTime: z.string().describe('The date and time of the requested session (ISO format).'),
   durationMinutes: z.number().describe('The duration of the session in minutes.'),
   numberOfPatients: z.number().optional().describe('The number of patients for the session, if applicable.'),
@@ -58,7 +58,7 @@ const prompt = ai.definePrompt({
 
   Aquí tens la llista de cites existents per al dia:
   {{#each existingAppointments}}
-  - Professional: {{this.professional}}, Màquina: {{this.machine}}, Inici: {{this.startTime}}, Durada: {{this.durationMinutes}} minuts, Zona: {{this.zone}}, Camilla: {{this.camilla}}
+  - Professional: {{this.professional}}, Màquines: {{#if this.machines}}{{this.machines}}{{else}}Cap{{/if}}, Inici: {{this.startTime}}, Durada: {{this.durationMinutes}} minuts, Zona: {{this.zone}}, Camilla: {{this.camilla}}
   {{/each}}
 
   Donada la següent sol·licitud de reserva:

@@ -54,7 +54,7 @@ const formSchema = z.object({
   professional: z.string().min(1, "El professional és obligatori."),
   zone: z.enum(["Dins", "Fora"]),
   camilla: z.string().min(1, "La camilla és obligatòria.").max(1, "Ha de ser un sol dígit."),
-  machine: z.string().optional(),
+  machines: z.array(z.string()).optional(),
   time: z.string().min(1, "L'hora és obligatori."),
   isMutua: z.boolean().default(false),
 });
@@ -93,7 +93,7 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
       professional: "",
       zone: "Dins",
       camilla: "1",
-      machine: "",
+      machines: [],
       time: "",
       isMutua: false,
     },
@@ -243,7 +243,9 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
     try {
       const sessionTypeDetails = sessionTypes.find(s => s.id === values.sessionType);
       const professionalDetails = professionals.find(p => p.id === values.professional);
-      const machineDetails = machines.find(m => m.id === values.machine);
+      const machineDetails = values.machines 
+        ? machines.filter(m => values.machines?.includes(m.id))
+        : undefined;
 
       if (!sessionTypeDetails || !professionalDetails) {
           toast({ variant: "destructive", title: "Error", description: "Dades del formulari invàlides." });
@@ -268,7 +270,7 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
           startTime: appointmentTime,
           zone: values.zone as 'Dins' | 'Fora',
           camilla: parseInt(values.camilla, 10),
-          machine: machineDetails,
+          machines: machineDetails,
           notes: '',
           isMutua: values.isMutua,
           isFirstTimeAppointment: isFirstAppointmentForThisClient,
@@ -293,7 +295,7 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
         client: '',
         time: '',
         sessionType: '',
-        machine: '',
+        machines: [],
         isMutua: false,
       });
       setSelectedSessionType(null);
@@ -552,16 +554,30 @@ export function QuickCreatePanel({ selectedDate, onAddAppointment, existingAppoi
                 {selectedSessionType?.requiresMachine && (
                   <FormField
                     control={form.control}
-                    name="machine"
+                    name="machines"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Màquina</FormLabel>
-                        <FormControl>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger><SelectValue placeholder="Selecciona una màquina" /></SelectTrigger>
-                            <SelectContent>{machines.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
-                          </Select>
-                        </FormControl>
+                        <FormLabel>Màquines</FormLabel>
+                        <div className="space-y-2 border rounded-md p-3">
+                          {machines.map((machine) => (
+                            <div key={machine.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={field.value?.includes(machine.id)}
+                                onCheckedChange={(checked) => {
+                                  const currentValue = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...currentValue, machine.id]);
+                                  } else {
+                                    field.onChange(currentValue.filter((id) => id !== machine.id));
+                                  }
+                                }}
+                              />
+                              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                {machine.name}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}

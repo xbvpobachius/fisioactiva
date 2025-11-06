@@ -149,10 +149,10 @@ export function AppointmentDetailsDialog({
               <MapPin className="h-5 w-5 text-muted-foreground" />
               <span>{appointment.zone} - Camilla {appointment.camilla}</span>
             </div>
-            {appointment.machine && (
+            {appointment.machines && appointment.machines.length > 0 && (
               <div className="flex items-center gap-4">
                   <Bot className="h-5 w-5 text-muted-foreground" />
-                  <span>{appointment.machine.name}</span>
+                  <span>{appointment.machines.map(m => m.name).join(', ')}</span>
               </div>
             )}
             <div className="flex items-center gap-4">

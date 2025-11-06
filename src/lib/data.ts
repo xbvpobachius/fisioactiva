@@ -2,11 +2,11 @@
 import type { Professional, Client, SessionType, Machine, Appointment } from './types';
 
 export const professionals: Professional[] = [
-  { id: '1', name: 'Glòria' },
-  { id: '2', name: 'Ester' },
-  { id: '3', name: 'Sílvia' },
-  { id: '4', name: 'Iván' },
-  { id: '5', name: 'Maria' },
+  { id: '1', name: 'Glòria', color: '#ef4444' }, // rojo
+  { id: '2', name: 'Ester', color: '#3b82f6' }, // azul
+  { id: '3', name: 'Sílvia', color: '#f97316' }, // naranja
+  { id: '4', name: 'Iván', color: '#6b7280' }, // gris
+  { id: '5', name: 'Maria', color: '#93C572' }, // verde pistacho
 ];
 
 export const clients: Client[] = [
@@ -60,7 +60,7 @@ export const initialAppointments: Appointment[] = [
         startTime: getTodayAt(10, 30),
         zone: 'Dins',
         camilla: 2,
-        machine: machines[1],
+        machines: [machines[1]],
         isFirstTimeAppointment: false,
     },
     {

@@ -205,7 +205,7 @@ export function AiAssistantPanel({ isOpen, onClose, selectedDate, onAddAppointme
         startTime: appointmentTime,
         zone: 'Dins' as 'Dins' | 'Fora',
         camilla: 1, 
-        machine: machine,
+        machines: machine ? [machine] : undefined,
         notes: `Creat per IA: "${finalTranscriptRef.current}"`,
         isMutua: aiResponse.isMutua,
         isFirstTimeAppointment: isFirstAppointmentForThisClient,

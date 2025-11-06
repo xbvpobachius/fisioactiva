@@ -31,13 +31,32 @@ export function MachineView({ appointments, onAppointmentSelect }: MachineViewPr
     const duration = appointment.sessionType.duration;
     const rowSpan = duration / TIME_SLOT_MINUTES;
 
-    const machineIndex = machines.findIndex(m => m.id === appointment.machine?.id);
-    const startCol = machineIndex + 2; // +1 for time column, +1 for 1-based index
+    // Si la cita tiene múltiples máquinas, necesitamos renderizar una tarjeta por cada máquina
+    // Por ahora retornamos null aquí y manejaremos el renderizado en el map
+    return null;
+  };
+
+  const getGridPositionsForAppointment = (appointment: Appointment) => {
+    if (!appointment.machines || appointment.machines.length === 0) return [];
     
-    return {
-      gridRow: `${startRow} / span ${rowSpan}`,
-      gridColumn: `${startCol}`,
-    };
+    const startTime = appointment.startTime;
+    const startMinutes = (startTime.getHours() - START_HOUR) * 60 + startTime.getMinutes();
+    const startRow = startMinutes / TIME_SLOT_MINUTES + 2;
+
+    const duration = appointment.sessionType.duration;
+    const rowSpan = duration / TIME_SLOT_MINUTES;
+
+    return appointment.machines.map(machine => {
+      const machineIndex = machines.findIndex(m => m.id === machine.id);
+      if (machineIndex === -1) return null;
+      const startCol = machineIndex + 2; // +1 for time column, +1 for 1-based index
+      
+      return {
+        gridRow: `${startRow} / span ${rowSpan}`,
+        gridColumn: `${startCol}`,
+        machineId: machine.id,
+      };
+    }).filter((pos): pos is { gridRow: string; gridColumn: string; machineId: string } => pos !== null);
   };
 
   const isSlotOccupied = (machineId: string, time: string) => {
@@ -45,7 +64,9 @@ export function MachineView({ appointments, onAppointmentSelect }: MachineViewPr
     const slotTime = (hour * 60) + minute;
 
     return appointments.some(app => {
-      if (app.machine?.id !== machineId) return false;
+      if (!app.machines || app.machines.length === 0) return false;
+      const hasMachine = app.machines.some(m => m.id === machineId);
+      if (!hasMachine) return false;
       const appStartMinutes = app.startTime.getHours() * 60 + app.startTime.getMinutes();
       const appEndMinutes = appStartMinutes + app.sessionType.duration;
       const slotStartMinutes = slotTime;
@@ -94,12 +115,18 @@ export function MachineView({ appointments, onAppointmentSelect }: MachineViewPr
 
             {/* Appointments */}
             {appointments.map(appointment => {
-                if (!appointment.machine) return null;
-                return (
-                  <div key={appointment.id} style={getGridPosition(appointment)} className="p-1 min-h-0 z-10" onClick={() => onAppointmentSelect(appointment)}>
-                      <AppointmentCard appointment={appointment} />
+                if (!appointment.machines || appointment.machines.length === 0) return null;
+                const positions = getGridPositionsForAppointment(appointment);
+                return positions.map((pos, index) => (
+                  <div 
+                    key={`${appointment.id}-${pos.machineId}-${index}`} 
+                    style={{ gridRow: pos.gridRow, gridColumn: pos.gridColumn }} 
+                    className="p-1 min-h-0 z-10" 
+                    onClick={() => onAppointmentSelect(appointment)}
+                  >
+                    <AppointmentCard appointment={appointment} />
                   </div>
-                )
+                ));
             })}
         </div>
     </div>

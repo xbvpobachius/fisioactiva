@@ -21,7 +21,11 @@ const getAppointmentsFromStorage = (): Appointment[] => {
         client: clients.find(c => c.id === app.client.id) || app.client,
         professional: professionals.find(p => p.id === app.professional.id) || app.professional,
         sessionType: sessionTypes.find(s => s.id === app.sessionType.id) || app.sessionType,
-        machine: app.machine ? machines.find(m => m.id === app.machine.id) || app.machine : undefined,
+        machines: app.machines 
+          ? app.machines.map((m: any) => machines.find(m2 => m2.id === m.id) || m).filter(Boolean)
+          : app.machine 
+            ? [machines.find(m => m.id === app.machine.id) || app.machine].filter(Boolean)
+            : undefined,
       }));
     } else {
       // Initialize localStorage with initial data

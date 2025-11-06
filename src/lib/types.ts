@@ -1,6 +1,7 @@
 export type Professional = {
   id: string;
   name: string;
+  color: string;
 };
 
 export type SessionType = {
@@ -39,7 +40,7 @@ export type Appointment = {
   startTime: Date;
   zone: 'Dins' | 'Fora';
   camilla: number;
-  machine?: Machine;
+  machines?: Machine[];
   notes?: string;
   isMutua?: boolean;
   isFirstTimeAppointment?: boolean; // Add this field

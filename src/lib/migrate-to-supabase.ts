@@ -56,7 +56,11 @@ export async function migrateLocalStorageToSupabase() {
             start_time: new Date(appointment.startTime).toISOString(),
             zone: appointment.zone,
             camilla: appointment.camilla,
-            machine_id: appointment.machine?.id || null,
+            machine_ids: appointment.machines && appointment.machines.length > 0
+              ? appointment.machines.map((m: any) => m.id)
+              : appointment.machine
+                ? [appointment.machine.id]
+                : null,
             notes: appointment.notes || '',
             is_mutua: appointment.isMutua || false,
             is_first_time_appointment: appointment.isFirstTimeAppointment || false
