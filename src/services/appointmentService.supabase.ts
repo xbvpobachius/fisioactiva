@@ -64,20 +64,32 @@ const mapSupabaseToAppointment = async (row: any): Promise<Appointment | null> =
 };
 
 // Convertir appointment de la app a formato Supabase
-const mapAppointmentToSupabase = (appointment: any) => ({
-  client_id: appointment.client.id,
-  session_type_id: appointment.sessionType.id,
-  professional_id: appointment.professional.id,
-  start_time: appointment.startTime.toISOString(),
-  zone: appointment.zone,
-  camilla: appointment.camilla,
-  machine_ids: appointment.machines && appointment.machines.length > 0 
-    ? appointment.machines.map((m: any) => m.id) 
-    : null,
-  notes: appointment.notes || '',
-  is_mutua: appointment.isMutua || false,
-  is_first_time_appointment: appointment.isFirstTimeAppointment || false
-});
+const mapAppointmentToSupabase = (appointment: any) => {
+  const baseData: any = {
+    client_id: appointment.client.id,
+    session_type_id: appointment.sessionType.id,
+    professional_id: appointment.professional.id,
+    start_time: appointment.startTime.toISOString(),
+    zone: appointment.zone,
+    camilla: appointment.camilla,
+    notes: appointment.notes || '',
+    is_mutua: appointment.isMutua || false,
+    is_first_time_appointment: appointment.isFirstTimeAppointment || false
+  };
+
+  // Manejar máquinas: intentar usar machine_ids (JSONB) si hay múltiples, sino machine_id (compatibilidad)
+  if (appointment.machines && appointment.machines.length > 0) {
+    const machineIds = appointment.machines.map((m: any) => m.id);
+    // Intentar usar machine_ids (JSONB) primero
+    baseData.machine_ids = machineIds;
+    // También mantener machine_id para compatibilidad si solo hay una máquina
+    if (machineIds.length === 1) {
+      baseData.machine_id = machineIds[0];
+    }
+  }
+
+  return baseData;
+};
 
 export async function getAppointments(): Promise<Appointment[]> {
   try {
@@ -108,14 +120,56 @@ export async function addAppointment(
   appointmentData: Omit<Appointment, 'id' | 'startTime'> & { startTime: Date }
 ): Promise<Appointment | null> {
   try {
-    const { data, error } = await supabase
+    const supabaseData = mapAppointmentToSupabase(appointmentData);
+    
+    // Intentar insertar con machine_ids primero
+    let { data, error } = await supabase
       .from('appointments')
-      .insert([mapAppointmentToSupabase(appointmentData)])
+      .insert([supabaseData])
       .select()
       .single();
 
+    // Si falla porque machine_ids no existe o hay un error de columna, intentar sin ese campo
+    if (error) {
+      const errorMessage = error.message || error.code || '';
+      const isColumnError = errorMessage.includes('machine_ids') || 
+                           errorMessage.includes('column') ||
+                           error.code === '42703' || // undefined_column
+                           error.code === '42P01';   // undefined_table
+      
+      if (isColumnError && supabaseData.machine_ids) {
+        console.warn('machine_ids field not available, falling back to machine_id');
+        const fallbackData = { ...supabaseData };
+        delete fallbackData.machine_ids;
+        // Si hay máquinas, usar solo la primera para machine_id
+        if (appointmentData.machines && appointmentData.machines.length > 0) {
+          fallbackData.machine_id = appointmentData.machines[0].id;
+        }
+        
+        const retryResult = await supabase
+          .from('appointments')
+          .insert([fallbackData])
+          .select()
+          .single();
+        
+        if (!retryResult.error) {
+          data = retryResult.data;
+          error = null;
+        } else {
+          error = retryResult.error;
+        }
+      }
+    }
+
     if (error) {
       console.error('Error adding appointment:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      console.error('Data attempted:', supabaseData);
       return null;
     }
 
@@ -188,18 +242,59 @@ export async function updateAppointment(
       updateData.start_time = appointmentData.startTime.toISOString();
     }
     if (appointmentData.machines !== undefined) {
-      updateData.machine_ids = appointmentData.machines && appointmentData.machines.length > 0
-        ? appointmentData.machines.map(m => m.id)
-        : null;
+      if (appointmentData.machines && appointmentData.machines.length > 0) {
+        updateData.machine_ids = appointmentData.machines.map(m => m.id);
+        // También actualizar machine_id para compatibilidad si solo hay una
+        if (appointmentData.machines.length === 1) {
+          updateData.machine_id = appointmentData.machines[0].id;
+        }
+      } else {
+        updateData.machine_ids = null;
+        updateData.machine_id = null;
+      }
     }
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from('appointments')
       .update(updateData)
       .eq('id', appointmentId);
 
+    // Si falla porque machine_ids no existe, intentar sin ese campo
+    if (error && updateData.machine_ids !== undefined) {
+      const errorMessage = error.message || error.code || '';
+      const isColumnError = errorMessage.includes('machine_ids') || 
+                           errorMessage.includes('column') ||
+                           error.code === '42703' ||
+                           error.code === '42P01';
+      
+      if (isColumnError) {
+        console.warn('machine_ids field not available in update, falling back to machine_id');
+        const fallbackData = { ...updateData };
+        delete fallbackData.machine_ids;
+        // Si hay máquinas, usar solo la primera para machine_id
+        if (appointmentData.machines && appointmentData.machines.length > 0) {
+          fallbackData.machine_id = appointmentData.machines[0].id;
+        } else {
+          fallbackData.machine_id = null;
+        }
+        
+        const retryResult = await supabase
+          .from('appointments')
+          .update(fallbackData)
+          .eq('id', appointmentId);
+        
+        error = retryResult.error;
+      }
+    }
+
     if (error) {
       console.error('Error updating appointment:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       return false;
     }
 
