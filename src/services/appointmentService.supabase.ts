@@ -31,10 +31,25 @@ const mapSupabaseToAppointment = async (row: any): Promise<Appointment | null> =
     
     // Manejar máquinas: puede ser un array JSONB o un solo machine_id (compatibilidad hacia atrás)
     let machinesArray: any[] = [];
-    if (row.machine_ids && Array.isArray(row.machine_ids)) {
-      machinesArray = row.machine_ids.map((id: string) => machines.find(m => m.id === id)).filter(Boolean);
-    } else if (row.machine_id) {
-      // Compatibilidad hacia atrás: si existe machine_id, lo convertimos a array
+    if (row.machine_ids) {
+      // machine_ids puede venir como array o como string JSON
+      if (Array.isArray(row.machine_ids)) {
+        machinesArray = row.machine_ids.map((id: string) => machines.find(m => m.id === id)).filter(Boolean);
+      } else if (typeof row.machine_ids === 'string') {
+        // Si viene como string, intentar parsearlo
+        try {
+          const parsed = JSON.parse(row.machine_ids);
+          if (Array.isArray(parsed)) {
+            machinesArray = parsed.map((id: string) => machines.find(m => m.id === id)).filter(Boolean);
+          }
+        } catch (e) {
+          console.warn('Error parsing machine_ids:', e);
+        }
+      }
+    }
+    
+    // Si no hay máquinas en machine_ids, intentar con machine_id (compatibilidad hacia atrás)
+    if (machinesArray.length === 0 && row.machine_id) {
       const machine = machines.find(m => m.id === row.machine_id);
       if (machine) machinesArray = [machine];
     }
